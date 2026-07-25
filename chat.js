@@ -1,39 +1,57 @@
 module.exports = async (req, res) => {
+    // إعدادات الـ CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(200).send('Server is running successfully! 🚀');
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
 
     try {
-        const { message } = req.body || {};
-        const apiKey = process.env.GEMINI_API_KEY;
+        // استقبال نص الرسالة من الموقع
+        let userMessage = req.body?.message || "مرحبا";
 
+        const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            return res.status(200).json({ reply: "المفتاح GEMINI_API_KEY غير موجود في Vercel" });
+            return res.status(200).json({ reply: "خطأ: لم يتم ضبط GEMINI_API_KEY في Vercel" });
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const systemPrompt = `أنت المساعد الذكي للمهندس إياد محمد أبو علي (Eng. Eyad Mohamed AboAli)، مهندس برمجيات ومصمم جرافيك ومبتكر روبوتات. أجب عن الأسئلة بلباقة وبساطة.`;
 
-        const response = await fetch(url, {
+        // إرسال الطلب لجوجل API
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: message || "أهلاً" }] }]
+                contents: [
+                    {
+                        parts: [
+                            { text: systemPrompt + "\n\nسؤال المستخدم: " + userMessage }
+                        ]
+                    }
+                ]
             })
         });
 
         const data = await response.json();
 
+        // لو فيه مشكلة في المفتاح أو الموديل
         if (data.error) {
-            return res.status(200).json({ reply: `خطأ من جوجل: ${data.error.message}` });
+            return res.status(200).json({ reply: "خطأ من جوجل: " + data.error.message });
         }
 
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        return res.status(200).json({ reply: text || "رد فارغ" });
+        // استخراج الرد
+        const botReply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    } catch (err) {
-        return res.status(200).json({ reply: `خطأ سيرفر: ${err.message}` });
+        if (botReply) {
+            return res.status(200).json({ reply: botReply });
+        } else {
+            return res.status(200).json({ reply: "عذراً، لم يتوفر رد في الوقت الحالي." });
+        }
+
+    } catch (error) {
+        return res.status(200).json({ reply: "حدث خطأ في الاتصال: " + error.message });
     }
 };
