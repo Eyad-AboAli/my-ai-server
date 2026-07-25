@@ -1,12 +1,8 @@
 const eyadInfo = `
-أنت المساعد الذكي للمهندس إياد محمد أبو علي (Eng. Eyad Mohamed AboAli).
-- المهن والمهارات: طالب، مهندس برمجيات، مطور ويب (Frontend)، مصمم جرافيك وهويات بصرية، ومبتكر في الإلكترونيات والروبوتات.
-- السكن والأصل: كفر الدوار (البحيرة) ومقيم بالإسكندرية.
-- البرامج والمهارات: Photoshop, Illustrator, VS Code, Git, HTML, CSS, JS, Flutter, Arduino.
-- السيرة الذاتية (CV) والواتساب: https://wa.me/201111780060
-- البريد: Eyadaboali1111@gmail.com | الهاتف: +20 1111780060
-
-القواعد: أجب بنفس لغة الزائر، واشرح مهاراته بأسلوب احترافي وودي.
+أنت المساعد الذكي للمهندس إياد محمد أبو علي.
+- المهن والمهارات: طالب، مهندس برمجيات، مطور ويب (Frontend)، مصمم جرافيك، ومبتكر روبوتات.
+- السكن: مقيم بالإسكندرية.
+- للتواصل: Eyadaboali1111@gmail.com | +20 1111780060
 `;
 
 module.exports = async (req, res) => {
@@ -24,7 +20,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method !== 'POST') {
-        return res.status(200).send('Server is running successfully! 🚀');
+        return res.status(200).send('Server is running successfully!');
     }
 
     try {
@@ -33,8 +29,12 @@ module.exports = async (req, res) => {
 
         const apiKey = process.env.GEMINI_API_KEY;
 
-        // استخدام موديل gemini-1.5-flash المستقر والمجاني
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        if (!apiKey) {
+            return res.status(200).json({ reply: "خطأ: لم يتم العثور على GEMINI_API_KEY في إعدادات Vercel!" });
+        }
+
+        // الاتصال بموديل gemini-2.5-flash المحدث
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -44,25 +44,20 @@ module.exports = async (req, res) => {
 
         const data = await response.json();
 
-        // طباعة تفاصيل الرد في Logs للتحقق عند الحاجة
-        console.log("Gemini API Status:", response.status);
         if (data.error) {
-            console.log("Gemini Error Details:", JSON.stringify(data.error));
+            // إظهار سبب الخطأ الصريح القادم من جوجل في الشات
+            return res.status(200).json({ reply: `خطأ من جوجل API: ${data.error.message}` });
         }
 
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (reply) {
             return res.status(200).json({ reply });
-        } else if (data.error?.message) {
-            // إظهار سبب الخطأ الحقيقي لو الـ API Key فيه مشكلة
-            return res.status(200).json({ reply: `خطأ من جوجل API: ${data.error.message}` });
         } else {
-            return res.status(200).json({ reply: "أهلاً بك! أنا مساعد إياد الذكي، كيف يمكنني مساعدتك اليوم؟" });
+            return res.status(200).json({ reply: "لم أستطع معالجة الإجابة، يرجى المحاولة مرة أخرى." });
         }
 
     } catch (err) {
-        console.error("Server Error:", err);
-        return res.status(500).json({ error: "حدث خطأ في الاتصال بالسيرفر" });
+        return res.status(500).json({ error: "حدث خطأ في الاتصال بالسيرفر: " + err.message });
     }
 };
