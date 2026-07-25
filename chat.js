@@ -11,7 +11,6 @@ const eyadInfo = `
 `;
 
 module.exports = async (req, res) => {
-    // تفعيل CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -44,10 +43,17 @@ module.exports = async (req, res) => {
         });
 
         const data = await response.json();
+
+        // طباعة الاستجابة للتحقق في Vercel Logs لو حدث خطأ
+        if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+            console.log("Gemini API Error Response:", JSON.stringify(data));
+        }
+
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "عذراً، أعد محاولة السؤال.";
 
         return res.status(200).json({ reply });
     } catch (err) {
+        console.error("Server Error:", err);
         return res.status(500).json({ error: "حدث خطأ في السيرفر" });
     }
 };
