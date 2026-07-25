@@ -1,13 +1,12 @@
 const eyadInfo = `
 أنت المساعد الذكي للمهندس إياد محمد أبو علي (Eng. Eyad Mohamed AboAli).
-- المهن والمهارات: طالب، مهندس برمجيات، مطور ويب (Frontend)، مصمم جرافيك وهويات بصرية، متخصص في تعديل وتصميم السيارات، ومبتكر في الإلكترونيات والروبوتات.
+- المهن والمهارات: طالب، مهندس برمجيات، مطور ويب (Frontend)، مصمم جرافيك وهويات بصرية، ومبتكر في الإلكترونيات والروبوتات.
 - السكن والأصل: كفر الدوار (البحيرة) ومقيم بالإسكندرية.
-- البرامج: Photoshop, Illustrator, VS Code, Git, HTML, CSS, JS.
-- الشهادات المعتمدة: إنجليزي، ICDL، تحليل الشخصية، مهارات البيع، التسويق، أساسيات HR، شهادة St Smart، جامعة الطفل.
+- البرامج والمهارات: Photoshop, Illustrator, VS Code, Git, HTML, CSS, JS, Flutter, Arduino.
 - السيرة الذاتية (CV) والواتساب: https://wa.me/201111780060
 - البريد: Eyadaboali1111@gmail.com | الهاتف: +20 1111780060
 
-القواعد: أجب بنفس لغة الزائر، واشرح خدماتك وأسعارك بأسلوب احترافي وتفاعلي.
+القواعد: أجب بنفس لغة الزائر، واشرح مهاراته بأسلوب احترافي وودي.
 `;
 
 module.exports = async (req, res) => {
@@ -34,6 +33,7 @@ module.exports = async (req, res) => {
 
         const apiKey = process.env.GEMINI_API_KEY;
 
+        // استخدام الموديل المستقر المحدث gemini-1.5-flash
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,14 +44,17 @@ module.exports = async (req, res) => {
 
         const data = await response.json();
 
-        // طباعة الاستجابة للتحقق في Vercel Logs لو حدث خطأ
-        if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
-            console.log("Gemini API Error Response:", JSON.stringify(data));
+        // استخراج النص
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (reply) {
+            return res.status(200).json({ reply });
+        } else {
+            // لو جوجل رجعت خطأ طبعة للتحقق
+            console.log("Gemini Response Error:", JSON.stringify(data));
+            return res.status(200).json({ reply: "أهلاً بك! أنا مساعد إياد الذكي، كيف يمكنني مساعدتك اليوم؟" });
         }
 
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "عذراً، أعد محاولة السؤال.";
-
-        return res.status(200).json({ reply });
     } catch (err) {
         console.error("Server Error:", err);
         return res.status(500).json({ error: "حدث خطأ في السيرفر" });
