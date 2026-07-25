@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
 
         const apiKey = process.env.GEMINI_API_KEY;
 
-        // استخدام الموديل المستقر المحدث gemini-1.5-flash
+        // استخدام موديل gemini-1.5-flash المستقر والمجاني
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,19 +44,25 @@ module.exports = async (req, res) => {
 
         const data = await response.json();
 
-        // استخراج النص
+        // طباعة تفاصيل الرد في Logs للتحقق عند الحاجة
+        console.log("Gemini API Status:", response.status);
+        if (data.error) {
+            console.log("Gemini Error Details:", JSON.stringify(data.error));
+        }
+
         const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (reply) {
             return res.status(200).json({ reply });
+        } else if (data.error?.message) {
+            // إظهار سبب الخطأ الحقيقي لو الـ API Key فيه مشكلة
+            return res.status(200).json({ reply: `خطأ من جوجل API: ${data.error.message}` });
         } else {
-            // لو جوجل رجعت خطأ طبعة للتحقق
-            console.log("Gemini Response Error:", JSON.stringify(data));
             return res.status(200).json({ reply: "أهلاً بك! أنا مساعد إياد الذكي، كيف يمكنني مساعدتك اليوم؟" });
         }
 
     } catch (err) {
         console.error("Server Error:", err);
-        return res.status(500).json({ error: "حدث خطأ في السيرفر" });
+        return res.status(500).json({ error: "حدث خطأ في الاتصال بالسيرفر" });
     }
 };
